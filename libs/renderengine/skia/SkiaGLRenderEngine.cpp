@@ -37,25 +37,16 @@
 #include <numeric>
 
 #include <common/Panopticon.h>
-#include "GLExtensions.h"
+#include "../gl/GLExtensions.h"
 #include "compat/SkiaGpuContext.h"
+
+bool checkGlError(const char* op, int lineNumber);
 
 namespace android {
 namespace renderengine {
 namespace skia {
 
 using base::StringAppendF;
-
-static bool checkGlError(const char* op, int lineNumber) {
-    bool errorFound = false;
-    GLint error = glGetError();
-    while (error != GL_NO_ERROR) {
-        errorFound = true;
-        error = glGetError();
-        ALOGV("after %s() (line # %d) glError (0x%x)\n", op, lineNumber, error);
-    }
-    return errorFound;
-}
 
 static status_t selectConfigForAttribute(EGLDisplay dpy, EGLint const* attrs, EGLint attribute,
                                          EGLint wanted, EGLConfig* outConfig) {
@@ -159,7 +150,7 @@ std::unique_ptr<SkiaGLRenderEngine> SkiaGLRenderEngine::create(
         LOG_ALWAYS_FATAL("eglQueryString(EGL_EXTENSIONS) failed");
     }
 
-    auto& extensions = GLExtensions::getInstance();
+    auto& extensions = gl::GLExtensions::getInstance();
     extensions.initWithEGLStrings(eglVersion, eglExtensions);
 
     // The code assumes that ES2 or later is available if this extension is
@@ -327,7 +318,7 @@ bool SkiaGLRenderEngine::supportsFastRotatedClipRRectAA() const {
 bool SkiaGLRenderEngine::supportsForwardPixelKill() const {
     // ARM gpu support this since 2013
     constexpr std::string kArm = "ARM";
-    return GLExtensions::getInstance().getVendor() == kArm;
+    return gl::GLExtensions::getInstance().getVendor() == kArm;
 }
 bool SkiaGLRenderEngine::supportsProtectedContentImpl() const {
     return mProtectedEGLContext != EGL_NO_CONTEXT;
@@ -380,8 +371,8 @@ base::unique_fd SkiaGLRenderEngine::flushAndSubmit(SkiaGpuContext* context,
 }
 
 bool SkiaGLRenderEngine::waitGpuFence(base::borrowed_fd fenceFd) {
-    if (!GLExtensions::getInstance().hasNativeFenceSync() ||
-        !GLExtensions::getInstance().hasWaitSync()) {
+    if (!gl::GLExtensions::getInstance().hasNativeFenceSync() ||
+        !gl::GLExtensions::getInstance().hasWaitSync()) {
         return false;
     }
 
@@ -416,7 +407,7 @@ bool SkiaGLRenderEngine::waitGpuFence(base::borrowed_fd fenceFd) {
 
 base::unique_fd SkiaGLRenderEngine::flushGL() {
     SFTRACE_CALL();
-    if (!GLExtensions::getInstance().hasNativeFenceSync()) {
+    if (!gl::GLExtensions::getInstance().hasNativeFenceSync()) {
         return base::unique_fd();
     }
 
@@ -507,13 +498,13 @@ EGLContext SkiaGLRenderEngine::createEglContext(EGLDisplay display, EGLConfig co
 
 std::optional<RenderEngine::ContextPriority> SkiaGLRenderEngine::createContextPriority(
         const RenderEngineCreationArgs& args) {
-    if (!GLExtensions::getInstance().hasContextPriority()) {
+    if (!gl::GLExtensions::getInstance().hasContextPriority()) {
         return std::nullopt;
     }
 
     switch (args.contextPriority) {
         case RenderEngine::ContextPriority::Realtime:
-            if (GLExtensions::getInstance().hasRealtimePriority()) {
+            if (gl::GLExtensions::getInstance().hasRealtimePriority()) {
                 return RenderEngine::ContextPriority::Realtime;
             } else {
                 ALOGI("Realtime priority unsupported, degrading gracefully to high priority");
@@ -557,8 +548,8 @@ int SkiaGLRenderEngine::getContextPriority() {
 }
 
 void SkiaGLRenderEngine::appendBackendSpecificInfoToDump(std::string& result) {
-    const GLExtensions& extensions = GLExtensions::getInstance();
-    StringAppendF(&result, "\n ------------RE GLES (Ganesh)------------\n");
+    const gl::GLExtensions& extensions = gl::GLExtensions::getInstance();
+    StringAppendF(&result, "\n ------------RE GLES (legacy GLES)------------\n");
     StringAppendF(&result, "EGL implementation : %s\n", extensions.getEGLVersion());
     StringAppendF(&result, "%s\n", extensions.getEGLExtensions());
     StringAppendF(&result, "GLES: %s, %s, %s\n", extensions.getVendor(), extensions.getRenderer(),

@@ -16,6 +16,7 @@
 
 #include <renderengine/RenderEngine.h>
 
+#include "gl/GLESRenderEngine.h"
 #include "renderengine/ExternalTexture.h"
 #include "skia/Cache.h"
 #include "skia/GaneshVkRenderEngine.h"
@@ -55,9 +56,7 @@ std::unique_ptr<RenderEngine> RenderEngine::create(const RenderEngineCreationArg
             };
         } else { // GL
             createInstanceFactory = [args]() {
-                skia::Cache::initializeGaneshDiskCache();
-
-                return android::renderengine::skia::SkiaGLRenderEngine::create(args);
+                return android::renderengine::gl::GLESRenderEngine::create(args);
             };
         }
     }
