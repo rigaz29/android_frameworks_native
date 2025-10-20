@@ -52,6 +52,7 @@ RequestedLayerState::RequestedLayerState(const LayerCreationArgs& args)
         name(args.name + "#" + std::to_string(args.sequence)),
         canBeRoot(args.addToRoot),
         layerCreationFlags(args.flags),
+        textureName(args.textureName),
         ownerUid(args.ownerUid),
         ownerPid(args.ownerPid),
         ownerPermissions(args.ownerPermissions),

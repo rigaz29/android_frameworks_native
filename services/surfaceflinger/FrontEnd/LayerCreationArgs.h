@@ -56,6 +56,7 @@ struct LayerCreationArgs {
     pid_t ownerPid;
     uid_t ownerUid;
     uint64_t ownerPermissions;
+    uint32_t textureName;
     uint32_t sequence;
     bool addToRoot = true;
     wp<IBinder> parentHandle = nullptr;
