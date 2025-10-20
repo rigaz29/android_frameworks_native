@@ -271,7 +271,8 @@ bool RenderEngineThreaded::canSkipPostRenderCleanup() const {
 void RenderEngineThreaded::drawLayersInternal(
         const std::shared_ptr<std::promise<FenceResult>>&& resultPromise,
         const DisplaySettings& display, const std::vector<LayerSettings>& layers,
-        const std::shared_ptr<ExternalTexture>& buffer, base::unique_fd&& bufferFence) {
+        const std::shared_ptr<ExternalTexture>& buffer, const bool useFramebufferCache,
+        base::unique_fd&& bufferFence) {
     resultPromise->set_value(Fence::NO_FENCE);
     return;
 }
@@ -287,7 +288,8 @@ void RenderEngineThreaded::tonemapAndDrawGainmapInternal(
 
 ftl::Future<FenceResult> RenderEngineThreaded::drawLayers(
         const DisplaySettings& display, const std::vector<LayerSettings>& layers,
-        const std::shared_ptr<ExternalTexture>& buffer, base::unique_fd&& bufferFence) {
+        const std::shared_ptr<ExternalTexture>& buffer, const bool useFramebufferCache,
+        base::unique_fd&& bufferFence) {
     SFTRACE_CALL();
     const auto resultPromise = std::make_shared<std::promise<FenceResult>>();
     std::future<FenceResult> resultFuture = resultPromise->get_future();
@@ -296,13 +298,13 @@ ftl::Future<FenceResult> RenderEngineThreaded::drawLayers(
         std::lock_guard lock(mThreadMutex);
         mNeedsPostRenderCleanup = true;
         mFunctionCalls.push(
-                [resultPromise, display, layers, buffer, fd,
+                [resultPromise, display, layers, buffer, useFramebufferCache, fd,
                  registration = panopticon::share()](renderengine::RenderEngine& instance) {
                     SFTRACE_NAME("REThreaded::drawLayers");
                     registration->start();
                     instance.updateProtectedContext(layers, {buffer.get()});
                     instance.drawLayersInternal(std::move(resultPromise), display, layers, buffer,
-                                                base::unique_fd(fd));
+                                                useFramebufferCache, base::unique_fd(fd));
                 });
     }
     mCondition.notify_one();

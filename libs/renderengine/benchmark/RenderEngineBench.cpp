@@ -89,6 +89,10 @@ std::pair<uint32_t, uint32_t> getDisplaySize() {
     return std::pair<uint32_t, uint32_t>(width, height);
 }
 
+// This value doesn't matter, as it's not read. TODO(b/199918329): Once we remove
+// GLESRenderEngine we can remove this, too.
+static constexpr const bool kUseFrameBufferCache = false;
+
 static std::shared_ptr<ExternalTexture> allocateBuffer(RenderEngine& re, uint32_t width,
                                                        uint32_t height,
                                                        uint64_t extraUsageFlags = 0,
@@ -136,7 +140,10 @@ static std::shared_ptr<ExternalTexture> copyBuffer(RenderEngine& re,
     };
     auto layers = std::vector<LayerSettings>{layer};
 
-    sp<Fence> waitFence = re.drawLayers(display, layers, texture, base::unique_fd()).get().value();
+    sp<Fence> waitFence =
+            re.drawLayers(display, layers, texture, kUseFrameBufferCache, base::unique_fd())
+                    .get()
+                    .value();
     waitFence->waitForever(LOG_TAG);
     return texture;
 }
@@ -168,7 +175,7 @@ static void benchDrawLayers(RenderEngine& re, const std::vector<LayerSettings>& 
         // Sets Skia's cache limits
         re.onActiveDisplaySizeChanged(display.physicalDisplay.getSize());
         // Ensures shaders / pipelines are compiled
-        re.drawLayers(display, layers, outputBuffer, base::unique_fd())
+        re.drawLayers(display, layers, outputBuffer, kUseFrameBufferCache, base::unique_fd())
                 .get()
                 .value()
                 ->waitForever(LOG_TAG);
@@ -184,7 +191,10 @@ static void benchDrawLayers(RenderEngine& re, const std::vector<LayerSettings>& 
             nsecs_t start = systemTime(SYSTEM_TIME_MONOTONIC);
 
             sp<Fence> waitFence =
-                    re.drawLayers(display, layers, outputBuffer, base::unique_fd()).get().value();
+                    re.drawLayers(display, layers, outputBuffer, kUseFrameBufferCache,
+                                  base::unique_fd())
+                            .get()
+                            .value();
             nsecs_t cpuWorkDone = systemTime(SYSTEM_TIME_MONOTONIC);
 
             waitFence->waitForever(LOG_TAG);
