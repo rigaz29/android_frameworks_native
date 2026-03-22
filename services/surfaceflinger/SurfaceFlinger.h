@@ -882,7 +882,7 @@ private:
      */
     status_t createLayer(LayerCreationArgs& args, gui::CreateSurfaceResult& outResult);
 
-    status_t createLayer(const LayerCreationArgs& args, sp<IBinder>* outHandle,
+    status_t createLayer(LayerCreationArgs& args, sp<IBinder>* outHandle,
                          sp<Layer>* outLayer);
 
     // Checks if there are layer leaks before creating layer
