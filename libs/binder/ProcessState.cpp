@@ -53,11 +53,38 @@
 #define EXPECT_BINDER_OPEN_SUCCESS
 #endif
 
-#ifdef __ANDROID_VNDK__
-const char* kDefaultDriver = "/dev/vndbinder";
-#else
+// A37: perangkat ini tidak memakai VNDK (ro.vndk.version kosong), jadi domain
+// vendor binder tidak punya guna -- yang dihasilkannya justru membuat SETIAP
+// HAL AIDL vendor mendaftar ke vndservicemanager dan tidak pernah terlihat
+// framework. Terukur di perangkat sebelum perubahan ini:
+//
+//   vndservice list  ->  android.hardware.wifi.IWifi/default
+//                        android.hardware.drm.IDrmFactory/clearkey
+//   service check android.hardware.wifi.IWifi/default  ->  not found
+//   /proc/<pid>/fd   ->  hanya /dev/vndbinder
+//   debuggerd -b     ->  thread bernama "vndbinder:<pid>_*"
+//
+// Akibatnya Wi-Fi tidak bisa menyala dan halaman Wi-Fi di Settings menggantung
+// (Activity pause timeout), sementara prosesnya sendiri sehat.
+//
+// build/soong/cc/compiler.go:476 mendefinisikan __ANDROID_VNDK__ untuk SETIAP
+// varian vendor tanpa syarat, jadi tidak ada jalan mematikannya lewat konfigurasi.
+//
+// Percobaan sebelumnya -- melepas vndbinder dari CONFIG_ANDROID_BINDER_DEVICES --
+// SALAH dan membuat perangkat tidak bisa boot: /dev/vndbinder tinggal symlink
+// menggantung (dibuat init.rc:280 tanpa memeriksa target), sehingga jalan mundur
+// di init() bawah memundurkan vndservicemanager sendiri ke /dev/binder, ia gagal
+// menjadi context manager di sana, abort, lalu restart selamanya -- dan definisi
+// servisnya membawa 'onrestart class_restart main/hal/early_hal'.
+//
+//   Abort message: 'Could not become context manager'
+//
+// Mengubah default di sini jauh lebih sempit: vndservicemanager TIDAK
+// terpengaruh karena ia menerima driver lewat argumen
+// (cmds/servicemanager/main.cpp:153), sehingga tetap melayani /dev/vndbinder
+// seperti biasa. Yang berpindah hanya proses vendor lain, ke domain tempat
+// framework memang mencarinya.
 const char* kDefaultDriver = "/dev/binder";
-#endif
 
 // -------------------------------------------------------------------------
 
